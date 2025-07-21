@@ -24,19 +24,37 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relaciones
-  roleId    Int
-  role      Role     @relation(fields: [roleId], references: [id])
+  // Relationts
+  roleId   Int
+  role     Role      @relation(fields: [roleId], references: [id])
+  projects Project[]
 
   @@map("users")
 }
 
 model Role {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
-  // Relaciones
-  users     User[]
+  // Relationts
+  users User[]
 
   @@map("roles")
+}
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  status      String    @default("Pending") // e.g., "Pending", "Active", "Completed"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relation to User: Who created or owns this project
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  @@map("projects")
 }
