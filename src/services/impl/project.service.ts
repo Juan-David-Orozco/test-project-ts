@@ -1,17 +1,22 @@
 // Importamos el tipo 'Project' directamente de @prisma/client
 // Ya no necesitamos importar IProject desde interfaces, ya que usaremos el tipo de Prisma
-import { injectable, inject } from 'tsyringe';
+// import { injectable, inject } from 'tsyringe';
 import { Project } from '@prisma/client';
 import { IProjectService } from '../interfaces/IProjectService.js';
 import { IProjectRepository } from '../../repositories/interfaces/IProjectRepository.js';
 import { IProjectCreateDTO, IProjectUpdateDTO } from '../../interfaces/IProject.js';
 // Importamos el token del repositorio de proyectos del nuevo archivo tokens.ts
-import { PROJECT_REPOSITORY } from '../../config/tokens.js';
+// import { PROJECT_REPOSITORY } from '../../config/tokens.js';
 // import { PROJECT_REPOSITORY } from '../../config/container.js'; // Importamos el token del repositorio de proyectos
 
-@injectable()
+// @injectable()
 export class ProjectService implements IProjectService {
-  constructor(@inject(PROJECT_REPOSITORY) private projectRepository: IProjectRepository) {} // Inyectamos el repositorio
+  // constructor(@inject(PROJECT_REPOSITORY) private projectRepository: IProjectRepository) {} // Inyectamos el repositorio
+  private projectRepository: IProjectRepository;
+
+  constructor(projectRepository: IProjectRepository) { // Acepta IProjectRepository a través del constructor
+    this.projectRepository = projectRepository;
+  }
   /**
    * Creates a new project.
    * @param projectData Data for the new project.

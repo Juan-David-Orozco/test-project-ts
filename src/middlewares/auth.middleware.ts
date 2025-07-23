@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/conf.js";
-import { container } from 'tsyringe'; // Importamos el contenedor para resolver dependencias
-import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
+// import { container } from 'tsyringe'; // Importamos el contenedor para resolver dependencias
+// import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
+import { UserRepository } from '../repositories/impl/user.repository.js'; // Importar el repositorio concreto
+import prisma from '../config/prisma.js'; // Importar el cliente prisma directamente
 // Importamos el token del repositorio del nuevo archivo tokens.ts
-import { USER_REPOSITORY } from '../config/tokens.js';
+// import { USER_REPOSITORY } from '../config/tokens.js';
 // import { USER_REPOSITORY } from '../config/container.js'; // Importamos el token del repositorio
 import { IJwtPayload, IRequestUser } from '../interfaces/commons.js'; // Nuevas interfaces
 // import { UserService } from '../services/impl/user.service.js';
@@ -32,10 +34,15 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     const decoded = jwt.verify(token, JWT_SECRET as string) as IJwtPayload; // Usamos IJwtPayload
     // const decoded = jwt.verify(token, JWT_SECRET as string) as { id: number; role: string; iat: number; exp: number };
 
-    // Resolvemos el repositorio de usuarios usando el contenedor
-    const userRepository = container.resolve<IUserRepository>(USER_REPOSITORY);
-    const user = await userRepository.findById(decoded.id)
+    // // Resolvemos el repositorio de usuarios usando el contenedor
+    // const userRepository = container.resolve<IUserRepository>(USER_REPOSITORY);
+    // const user = await userRepository.findById(decoded.id)
     // const user = await UserService.findUserById(decoded.id);
+
+    // Instanciar manualmente UserRepository aquí
+    const userRepository = new UserRepository(prisma); // Pasar el cliente prisma
+
+    const user = await userRepository.findById(decoded.id);
 
     if (!user) {
       return res.status(403).json({ message: 'Access Denied: User not found!' });

@@ -1,22 +1,19 @@
-import "reflect-metadata"; // Must be imported first for tsyringe decorators
+// import "reflect-metadata"; // Must be imported first for tsyringe decorators
 import express from "express";
 import morgan from "morgan";
 // import app from "./app.js";
-// import prisma from "./config/prisma.js";
-import { container } from "tsyringe"; // Import container
-import { PrismaClient } from "@prisma/client";
-import { registerDependencies } from "./config/container.js"; // Import DI setup
-import { PRISMA_CLIENT } from "./config/tokens.js";
+import prisma from "./config/prisma.js";
+// import { container } from "tsyringe"; // Import container
+// import { PrismaClient } from "@prisma/client";
+// import { registerDependencies } from "./config/container.js"; // Import DI setup
+// import { PRISMA_CLIENT } from "./config/tokens.js";
 import { PORT } from "./config/conf.js";
+
 // import authRoutes from './routes/auth.routes.js';
 // import projectRoutes from './routes/project.routes.js';
 import mainRouter from "./routes/index.js"; // Import the main router
 
 const app = express();
-
-// Register all dependencies in the container FIRST.
-// This ensures that all tokens are bound to their concrete implementations.
-registerDependencies();
 
 // Middlewares
 app.use(morgan("dev"));
@@ -41,7 +38,7 @@ app.use("/api", mainRouter);
 
 // Database connection and server start
 const runServer = async () => {
-  const prisma = container.resolve<PrismaClient>(PRISMA_CLIENT); // Resolve PrismaClient from container
+  // const prisma = container.resolve<PrismaClient>(PRISMA_CLIENT); // Resolve PrismaClient from container
   try {
     await prisma.$connect();
     console.log("Connected to PostgreSQL database");

@@ -1,20 +1,26 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
+// import { injectable, inject } from 'tsyringe';
 import { IProjectService } from '../services/interfaces/IProjectService.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { IProjectCreateDTO, IProjectUpdateDTO } from '../interfaces/IProject.js';
-import { PROJECT_SERVICE } from '../config/tokens.js';
+// import { PROJECT_SERVICE } from '../config/tokens.js';
 // import { PROJECT_SERVICE } from '../config/container.js'; // Importamos el token del servicio de proyectos
 // import { ProjectService } from '../services/impl/project.service.js';
 
-@injectable()
+// @injectable()
 export class ProjectController {
-  constructor(@inject(PROJECT_SERVICE) private projectService: IProjectService) {} // Inyectamos el servicio de proyectos
+  // constructor(@inject(PROJECT_SERVICE) private projectService: IProjectService) {} // Inyectamos el servicio de proyectos
+  private projectService: IProjectService;
+
+  constructor(projectService: IProjectService) { // Acepta IProjectService a través del constructor
+    this.projectService = projectService;
+  }
+
   async createProject(req: Request, res: Response) {
     try {
       // @ts-ignore
       const createdById = req.user.id; // Get user ID from authenticated request
-      const projectData: IProjectCreateDTO = { ...req.body, createdById };
+      const projectData: IProjectCreateDTO = { ...req.body, createdById  };
       const project = await this.projectService.createProject(projectData);
       res.status(201).json({ message: 'Project created successfully', project });
     } catch (error) {
