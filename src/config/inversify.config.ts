@@ -1,0 +1,48 @@
+// src/config/inversify.config.ts
+import { Container } from 'inversify';
+import { PrismaClient } from '@prisma/client';
+
+// Importar los símbolos de inyección
+import { TYPES } from './types.js';
+
+// Importar las interfaces de Repositorios y Servicios
+import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
+import { IProjectRepository } from '../repositories/interfaces/IProjectRepository.js';
+import { IAuthService } from '../services/interfaces/IAuthService.js';
+import { IProjectService } from '../services/interfaces/IProjectService.js';
+
+// Importar las implementaciones concretas
+import { UserRepository } from '../repositories/impl/user.repository.js';
+import { ProjectRepository } from '../repositories/impl/project.repository.js';
+import { AuthService } from '../services/impl/auth.service.js';
+import { ProjectService } from '../services/impl/project.service.js';
+import { AuthController } from '../controllers/auth.controller.js';
+import { ProjectController } from '../controllers/project.controller.js';
+
+
+const container = new Container();
+
+// --- Registros ---
+
+// 1. PrismaClient como Singleton
+// Esto asegura que solo haya una instancia de PrismaClient en toda la aplicación.
+container.bind<PrismaClient>(TYPES.PrismaClient).toConstantValue(new PrismaClient());
+
+// 2. Repositorios (se instancian cada vez que se piden a menos que se defina lo contrario)
+// Notar que el constructor del repositorio necesitará el PrismaClient. Inversify lo inyectará automáticamente
+// porque UserRepository también usará `@inject(TYPES.PrismaClient)`.
+container.bind<IUserRepository>(TYPES.IUserRepository).to(UserRepository);
+container.bind<IProjectRepository>(TYPES.IProjectRepository).to(ProjectRepository);
+
+// 3. Servicios (se instancian cada vez que se piden)
+// Los servicios también tendrán sus dependencias (repositorios) inyectadas automáticamente.
+container.bind<IAuthService>(TYPES.IAuthService).to(AuthService);
+container.bind<IProjectService>(TYPES.IProjectService).to(ProjectService);
+
+// 4. Controladores (se instancian cada vez que se piden en las rutas)
+// Sus dependencias (servicios) también serán inyectadas.
+container.bind<AuthController>(TYPES.AuthController).to(AuthController);
+container.bind<ProjectController>(TYPES.ProjectController).to(ProjectController);
+
+
+export { container };

@@ -13,8 +13,8 @@
     "rootDir": "./src",                                  /* Specify the root folder within your source files. */
     
     /* Emit */
-    // "emitDecoratorMetadata": true,  // Add this line
-    // "experimentalDecorators": true, // Add this line
+    "emitDecoratorMetadata": true,  // Add this line
+    "experimentalDecorators": true, // Add this line
     "sourceMap": true,                              /* Create source map files for emitted JavaScript files. */
     "outDir": "./dist",                                   /* Specify an output folder for all emitted files. */
     

@@ -1,20 +1,21 @@
 import { PrismaClient, Project } from '@prisma/client';
 // import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../../config/types.js'; 
 import { IProjectRepository } from '../interfaces/IProjectRepository.js';
 import { IProjectCreateDTO, IProjectUpdateDTO } from '../../interfaces/IProject.js';
-import prisma from "../../config/prisma.js";
+// import prisma from "../../config/prisma.js";
 // Importamos el token de Prisma del nuevo archivo tokens.ts
 // import { PRISMA_CLIENT } from '../../config/tokens.js';
 // import { PRISMA_CLIENT } from '../../config/container.js';
 
-// @injectable()
+@injectable()
 export class ProjectRepository implements IProjectRepository {
-  // constructor(@inject(PRISMA_CLIENT) private prisma: PrismaClient) {}
-  private prisma: PrismaClient;
-
-  constructor(prismaClient: PrismaClient) { // Acepta PrismaClient a través del constructor
-    this.prisma = prismaClient;
-  }
+  constructor(@inject(TYPES.PrismaClient) private prisma: PrismaClient) {}
+  // private prisma: PrismaClient;
+  // constructor(prismaClient: PrismaClient) { // Acepta PrismaClient a través del constructor
+  //   this.prisma = prismaClient;
+  // }
 
   async create(data: IProjectCreateDTO): Promise<Project> {
     try {

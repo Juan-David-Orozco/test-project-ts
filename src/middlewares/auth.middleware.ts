@@ -2,8 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/conf.js";
 // import { container } from 'tsyringe'; // Importamos el contenedor para resolver dependencias
-// import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
-import { UserRepository } from '../repositories/impl/user.repository.js'; // Importar el repositorio concreto
+import { container } from '../config/inversify.config.js'; // Importar el contenedor
+import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
+// import { UserRepository } from '../repositories/impl/user.repository.js'; // Importar el repositorio concreto
+import { TYPES } from '../config/types.js'; // Importar los tipos/símbolos
 import prisma from '../config/prisma.js'; // Importar el cliente prisma directamente
 // Importamos el token del repositorio del nuevo archivo tokens.ts
 // import { USER_REPOSITORY } from '../config/tokens.js';
@@ -37,12 +39,15 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // // Resolvemos el repositorio de usuarios usando el contenedor
     // const userRepository = container.resolve<IUserRepository>(USER_REPOSITORY);
     // const user = await userRepository.findById(decoded.id)
-    // const user = await UserService.findUserById(decoded.id);
+    // const user = await UserService.findUserById(decoded.id); ???
 
     // Instanciar manualmente UserRepository aquí
-    const userRepository = new UserRepository(prisma); // Pasar el cliente prisma
+    // const userRepository = new UserRepository(prisma); // Pasar el cliente prisma
+    // const user = await userRepository.findById(decoded.id);
 
-    const user = await userRepository.findById(decoded.id);
+    // Resolver UserRepository desde el contenedor de InversifyJS
+    const userRepository = container.get<IUserRepository>(TYPES.IUserRepository);
+    const user = await userRepository.findById(decoded.id);    
 
     if (!user) {
       return res.status(403).json({ message: 'Access Denied: User not found!' });

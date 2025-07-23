@@ -1,23 +1,27 @@
 import { Router } from "express";
-import prisma from "../config/prisma.js"; // Importar el cliente prisma directamente
+// import prisma from "../config/prisma.js"; // Importar el cliente prisma directamente
 
 // import { container } from 'tsyringe';
+import { container } from '../config/inversify.config.js';
 import { authenticateToken } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
-
-import { ProjectRepository } from "../repositories/impl/project.repository.js";
-import { ProjectService } from "../services/impl/project.service.js";
+import { TYPES } from '../config/types.js'; // Importar los tipos/símbolos
+// import { ProjectRepository } from "../repositories/impl/project.repository.js";
+// import { ProjectService } from "../services/impl/project.service.js";
 import { ProjectController } from "../controllers/project.controller.js";
 
 const router = Router();
 
 // Compisicion DI
-const projectRepository = new ProjectRepository(prisma);
-const projectService = new ProjectService(projectRepository);
-const projectController = new ProjectController(projectService);
+// const projectRepository = new ProjectRepository(prisma);
+// const projectService = new ProjectService(projectRepository);
+// const projectController = new ProjectController(projectService);
 
 // Resolve ProjectController instance from the container
 // const projectController = container.resolve(ProjectController);
+
+// Resolver el controlador desde el contenedor
+const projectController = container.get<ProjectController>(TYPES.ProjectController);
 
 // All project routes require authentication
 router.use(authenticateToken);

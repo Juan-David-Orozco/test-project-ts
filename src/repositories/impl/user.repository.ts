@@ -1,19 +1,18 @@
 import { PrismaClient, User, Role } from '@prisma/client';
 // import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
 import { IUserRepository } from '../interfaces/IUserRepository.js';
+import { TYPES } from '../../config/types.js'; // Importar los tipos/símbolos
 // import prisma from "../../config/prisma.js";
 // Importamos el token de Prisma del nuevo archivo tokens.ts
 // import { PRISMA_CLIENT } from '../../config/tokens.js';
 // import { PRISMA_CLIENT } from '../../config/container.js'; // Importamos el token de Prisma
 
-// @injectable()
+@injectable()
 export class UserRepository implements IUserRepository {
-  // constructor(@inject(PRISMA_CLIENT) private prisma: PrismaClient) {} // Inyectamos PrismaClient
-  private prisma: PrismaClient;
-
-  constructor(prismaClient: PrismaClient) { // Acepta PrismaClient a través del constructor
-    this.prisma = prismaClient;
-  }
+  constructor(@inject(TYPES.PrismaClient) private prisma: PrismaClient) {} // Inyectamos PrismaClient
+  // private prisma: PrismaClient;
+  // constructor(prismaClient: PrismaClient) { this.prisma = prismaClient; }
 
   async findByEmail(email: string): Promise<(User & { role: Role }) | null> {
     return await this.prisma.user.findUnique({

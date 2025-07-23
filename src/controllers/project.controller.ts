@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 // import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../config/types.js'; 
 import { IProjectService } from '../services/interfaces/IProjectService.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { IProjectCreateDTO, IProjectUpdateDTO } from '../interfaces/IProject.js';
@@ -7,14 +9,13 @@ import { IProjectCreateDTO, IProjectUpdateDTO } from '../interfaces/IProject.js'
 // import { PROJECT_SERVICE } from '../config/container.js'; // Importamos el token del servicio de proyectos
 // import { ProjectService } from '../services/impl/project.service.js';
 
-// @injectable()
+@injectable()
 export class ProjectController {
-  // constructor(@inject(PROJECT_SERVICE) private projectService: IProjectService) {} // Inyectamos el servicio de proyectos
-  private projectService: IProjectService;
-
-  constructor(projectService: IProjectService) { // Acepta IProjectService a través del constructor
-    this.projectService = projectService;
-  }
+  constructor(@inject(TYPES.IProjectService) private projectService: IProjectService) {} // Inyectamos el servicio de proyectos
+  // private projectService: IProjectService;
+  // constructor(projectService: IProjectService) { // Acepta IProjectService a través del constructor
+  //   this.projectService = projectService;
+  // }
 
   async createProject(req: Request, res: Response) {
     try {

@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 // import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../../config/types.js'; 
 
 import { JWT_SECRET } from "../../config/conf.js";
 import { IAuthService } from '../interfaces/IAuthService.js';
@@ -11,14 +13,13 @@ import { IRegisterDTO, ILoginDTO, IAuthResponse } from '../../interfaces/IAuth.j
 // import { USER_REPOSITORY } from '../../config/container.js'; // Importamos el token del repositorio de usuarios
 import { User } from '@prisma/client';
 
-// @injectable()
+@injectable()
 export class AuthService implements IAuthService {
-  // constructor(@inject(USER_REPOSITORY) private userRepository: IUserRepository) {} // Inyectamos el repositorio
-  private userRepository: IUserRepository
-  
-  constructor(userRepository: IUserRepository) {
-    this.userRepository = userRepository;
-  }
+  constructor(@inject(TYPES.IUserRepository) private userRepository: IUserRepository) {} // Inyectamos el repositorio
+  // private userRepository: IUserRepository
+  // constructor(userRepository: IUserRepository) {
+  //   this.userRepository = userRepository;
+  // }
 
   async register(registerData: IRegisterDTO): Promise<Partial<User & { role: { name: string } }>> {
     const { username, email, password, role: roleName = 'user' } = registerData;
@@ -53,7 +54,7 @@ export class AuthService implements IAuthService {
     const token = jwt.sign(
       { id: user.id, role: user.role.name },
       JWT_SECRET as string,
-      { expiresIn: "1h" }
+      { expiresIn: "2d" }
     );
 
     return { 
