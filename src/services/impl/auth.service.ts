@@ -1,0 +1,66 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { injectable, inject } from 'tsyringe';
+
+import { JWT_SECRET } from "../../config/conf.js";
+import { IAuthService } from '../interfaces/IAuthService.js';
+import { IUserRepository } from '../../repositories/interfaces/IUserRepository.js';
+import { IRegisterDTO, ILoginDTO, IAuthResponse } from '../../interfaces/IAuth.js';
+// Importamos el token del repositorio de usuarios del nuevo archivo tokens.ts
+import { USER_REPOSITORY } from '../../config/tokens.js';
+// import { USER_REPOSITORY } from '../../config/container.js'; // Importamos el token del repositorio de usuarios
+import { User } from '@prisma/client';
+
+
+@injectable()
+export class AuthService implements IAuthService {
+  constructor(@inject(USER_REPOSITORY) private userRepository: IUserRepository) {} // Inyectamos el repositorio
+
+  async register(registerData: IRegisterDTO): Promise<Partial<User & { role: { name: string } }>> {
+    const { username, email, password, role: roleName = 'user' } = registerData;
+    const existingUser = await this.userRepository.findByEmail(email);
+    if (existingUser) {
+      throw new Error("User with this email already exists.");
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    let role = await this.userRepository.findRoleByName(roleName);
+    if (!role) {
+      role = await this.userRepository.createRole(roleName);
+    }
+    const user = await this.userRepository.create(username, email, hashedPassword, role.id);
+    return { id: user.id, username: user.username, email: user.email, role: { name: user.role.name } };
+  }
+
+  async login(loginData: ILoginDTO): Promise<IAuthResponse> {
+    const { email, password } = loginData;
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new Error("Invalid credentials. Email incorrect.");
+    }
+    // Check if user is active
+    if (!user.isActive) {
+      throw new Error('Account is deactivated');
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid credentials. Password incorrect.");
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role.name },
+      JWT_SECRET as string,
+      { expiresIn: "1h" }
+    );
+
+    return { 
+      user: { 
+        id: user.id,
+        username: user.username, 
+        email: user.email,
+        isActive: user.isActive,
+        role: user.role.name 
+      },
+      token
+    };  
+  }  
+}
