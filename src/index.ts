@@ -1,42 +1,9 @@
 import "reflect-metadata"; // Must be imported first for tsyringe decorators
-import express from "express";
-import morgan from "morgan";
-// import app from "./app.js";
-// import prisma from "./config/prisma.js";
-// import { container } from "tsyringe"; // Import container
+import app from "./app.js";
 import { container } from './config/inversify.config.js'; // Importar el contenedor configurado
 import { PrismaClient } from "@prisma/client";
-// import { registerDependencies } from "./config/container.js"; // Import DI setup
-// import { PRISMA_CLIENT } from "./config/tokens.js";
-import { PORT } from "./config/conf.js";
 import { TYPES } from './config/types.js'; // Importar los tipos/símbolos
-
-// import authRoutes from './routes/auth.routes.js';
-// import projectRoutes from './routes/project.routes.js';
-import mainRouter from "./routes/index.js"; // Import the main router
-
-const app = express();
-
-// Middlewares
-app.use(morgan("dev"));
-app.use(express.json());
-
-// Basic routes
-app.get("/", (req, res) => {
-  res.send("<h1>Welcome to Server to TypeScript</h1>");
-});
-
-app.get("/api", (req, res) => {
-  res.send("<h2>API build with TypeScript</h2>");
-});
-
-// app.use('/api/auth', authRoutes);
-// app.use('/api/projects', projectRoutes);
-
-// Use the main router for all API endpoints (AFTER the container has been fully registered)
-// This prevents controllers (which are resolved by tsyringe) from being
-// instantiated before their dependencies are known to the container.
-app.use("/api", mainRouter);
+import { PORT } from "./config/conf.js";
 
 // Database connection and server start
 const runServer = async () => {

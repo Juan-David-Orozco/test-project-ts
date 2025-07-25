@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 // import { injectable, inject } from 'tsyringe';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../../config/types.js'; 
+import { IEmailService, ISmsService } from '../interfaces/INotificationService.js'; // Importar interfaces de notificación
+import { Logger } from 'winston'; // Importar Logger de Winston
 
 import { JWT_SECRET } from "../../config/conf.js";
 import { IAuthService } from '../interfaces/IAuthService.js';
@@ -15,16 +17,29 @@ import { User } from '@prisma/client';
 
 @injectable()
 export class AuthService implements IAuthService {
-  constructor(@inject(TYPES.IUserRepository) private userRepository: IUserRepository) {} // Inyectamos el repositorio
-  // private userRepository: IUserRepository
-  // constructor(userRepository: IUserRepository) {
-  //   this.userRepository = userRepository;
-  // }
+  private userRepository: IUserRepository;
+  private emailService: IEmailService; // Declarar propiedad para el servicio de email
+  private smsService: ISmsService;     // Declarar propiedad para el servicio de SMS
+  private logger: Logger; // Declarar propiedad para el logger
+
+  constructor(
+    @inject(TYPES.IUserRepository) userRepository: IUserRepository, // Inyectamos el repositorio
+    @inject(TYPES.IEmailService) emailService: IEmailService, // Inyectar IEmailService
+    @inject(TYPES.ISmsService) smsService: ISmsService,     // Inyectar ISmsService
+    @inject(TYPES.Logger) logger: Logger, // Inyectar el Logger
+  ) {
+    this.userRepository = userRepository;
+    this.emailService = emailService;
+    this.smsService = smsService;
+    this.logger = logger; // Asignar el logger
+  }
 
   async register(registerData: IRegisterDTO): Promise<Partial<User & { role: { name: string } }>> {
+    this.logger.debug(`Attempting to register new user: ${registerData.email}`);
     const { username, email, password, role: roleName = 'user' } = registerData;
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
+      this.logger.warn(`Registration failed: User with email ${email} already exists.`);
       throw new Error("User with this email already exists.");
     }
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -34,25 +49,49 @@ export class AuthService implements IAuthService {
       // Si el rol no existe, obtenemos todos los roles válidos para el mensaje de error
       const validRoles = await this.userRepository.getAllRoleNames();
       const roleList = validRoles.map((r:any) => `'${r}'`).join(', ');
+      this.logger.warn(`Registration failed: Provided role '${roleName}' does not exist.`);
       throw new Error(`Role '${roleName}' does not exist. Please choose from: ${roleList}.`);
     }
 
     const user = await this.userRepository.create(username, email, hashedPassword, role.id);
+    this.logger.info(`User registered successfully: ${user.email} with role ${user.role.name}`);
+
+    try {
+      await this.emailService.sendRegistrationEmail(user.email, user.username);
+      this.logger.debug(`Registration email sent to ${user.email}`);
+      // Asumimos que registerData.phoneNumber existe si quieres enviar SMS
+      // if (registerData.phoneNumber) {
+      //   await this.smsService.sendRegistrationSms(registerData.phoneNumber, user.username);
+      // }
+      // Por simplicidad, siempre se asume un número de teléfono de ejemplo por ahora.
+      await this.smsService.sendRegistrationSms('+1234567890', user.username); // Usar un número de prueba
+      this.logger.debug(`Registration SMS sent to +1234567890 for ${user.username}`);
+    } catch (notificationError) {
+      // console.error(`Error sending notification for user ${user.email}:`, notificationError);
+      this.logger.error(`Error sending notification for user ${user.email}:`, notificationError);
+      // Decidir si este error debe impedir el registro o solo loguearse.
+      // Por ahora, solo se loguea.
+    }
+
     return { id: user.id, username: user.username, email: user.email, role: { name: user.role.name } };
   }
 
   async login(loginData: ILoginDTO): Promise<IAuthResponse> {
+    this.logger.debug(`Attempting to log in user: ${loginData.email}`);
     const { email, password } = loginData;
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
+      this.logger.warn(`Login failed for email ${email}: User not found.`);
       throw new Error("Invalid credentials. Email incorrect.");
     }
     // Check if user is active
     if (!user.isActive) {
+      this.logger.warn(`Login failed for email ${email}: User is deactivated.`);
       throw new Error('Account is deactivated');
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      this.logger.warn(`Login failed for email ${email}: Invalid password.`);
       throw new Error("Invalid credentials. Password incorrect.");
     }
 
@@ -61,6 +100,8 @@ export class AuthService implements IAuthService {
       JWT_SECRET as string,
       { expiresIn: "2d" }
     );
+
+    this.logger.info(`User logged in successfully: ${user.email}`);
 
     return { 
       user: { 
