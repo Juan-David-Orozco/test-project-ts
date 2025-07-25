@@ -63,21 +63,25 @@ export class ProjectController {
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Invalid project ID.' });
       }
+      const userId = req.user?.id;
+      const userRole = req.user?.role;
       const projectData: IProjectUpdateDTO = req.body;
-      const updatedProject = await this.projectService.updateProject(id, projectData);
+      const updatedProject = await this.projectService.updateProject(id, projectData, userId, userRole);
       res.status(200).json({ message: 'Project updated successfully', project: updatedProject });
     } catch (error) {
       handleServiceError(res, error, 'Failed to update project.');
     }
   }
 
-  async deleteProject(req: Request, res: Response) {
+  async deleteProject(req: Request, res: Response) {    
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Invalid project ID.' });
       }
-      const deletedProject = await this.projectService.deleteProject(id);
+      const userId = req.user?.id
+      const userRole = req.user?.role
+      const deletedProject = await this.projectService.deleteProject(id, userId, userRole);
       res.status(200).json({ message: 'Project deleted successfully', project: deletedProject });
     } catch (error) {
       handleServiceError(res, error, 'Failed to delete project.');

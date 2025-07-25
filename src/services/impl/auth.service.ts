@@ -29,9 +29,14 @@ export class AuthService implements IAuthService {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     let role = await this.userRepository.findRoleByName(roleName);
+    
     if (!role) {
-      role = await this.userRepository.createRole(roleName);
+      // Si el rol no existe, obtenemos todos los roles válidos para el mensaje de error
+      const validRoles = await this.userRepository.getAllRoleNames();
+      const roleList = validRoles.map((r:any) => `'${r}'`).join(', ');
+      throw new Error(`Role '${roleName}' does not exist. Please choose from: ${roleList}.`);
     }
+
     const user = await this.userRepository.create(username, email, hashedPassword, role.id);
     return { id: user.id, username: user.username, email: user.email, role: { name: user.role.name } };
   }

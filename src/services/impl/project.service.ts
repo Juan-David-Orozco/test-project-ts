@@ -51,7 +51,17 @@ export class ProjectService implements IProjectService {
    * @param projectData Data to update.
    * @returns The updated project.
    */
-  async updateProject(id: number, projectData: IProjectUpdateDTO): Promise<Project> {
+  async updateProject(id: number, projectData: IProjectUpdateDTO, userId: number, userRole: string ): Promise<Project> {
+    const project = await this.projectRepository.findById(id);
+    if (!project) {
+      throw new Error('Project not found.');
+    }
+    // Si el usuario es 'admin', puede actualizar cualquier proyecto
+    // Si el usuario es 'user', solo puede actualizar sus propios proyectos
+    if (userRole !== 'admin' && project.createdById !== userId) {
+      throw new Error('Unauthorized: You can only update your own projects.');
+    }
+
     return await this.projectRepository.update(id, projectData);
   }
 
@@ -60,7 +70,16 @@ export class ProjectService implements IProjectService {
    * @param id The project ID to delete.
    * @returns The deleted project.
    */
-  async deleteProject(id: number): Promise<Project> {
+  async deleteProject(id: number, userId: number, userRole: string): Promise<Project> {
+    const project = await this.projectRepository.findById(id);
+    if (!project) {
+      throw new Error('Project not found.');
+    }
+    // Si el usuario es 'admin', puede eliminar cualquier proyecto
+    // Si el usuario es 'user', solo puede eliminar sus propios proyectos
+    if (userRole !== 'admin' && project.createdById !== userId) {
+      throw new Error('Unauthorized: You can only delete your own projects.');
+    }
     return await this.projectRepository.delete(id);
   }
 }

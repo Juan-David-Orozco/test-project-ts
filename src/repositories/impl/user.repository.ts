@@ -46,7 +46,14 @@ export class UserRepository implements IUserRepository {
     return await this.prisma.role.findUnique({ where: { name: roleName } });
   }
 
-  async createRole(roleName: string): Promise<Role> {
-    return await this.prisma.role.create({ data: { name: roleName } });
+  async getAllRoleNames(): Promise<string[]> {
+    const roles = await this.prisma.role.findMany({
+      select: { name: true },
+    });
+    return roles.map(role => role.name);
   }
+
+  // async createRole(roleName: string): Promise<Role> {
+  //   return await this.prisma.role.create({ data: { name: roleName } });
+  // }
 }

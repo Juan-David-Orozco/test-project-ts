@@ -5,5 +5,6 @@ export interface IUserRepository {
   findById(id: number): Promise<(User & { role: Role }) | null>;
   create(username: string, email: string, passwordHash: string, roleId: number): Promise<User & { role: Role }>;
   findRoleByName(roleName: string): Promise<Role | null>;
-  createRole(roleName: string): Promise<Role>;
+  getAllRoleNames(): Promise<string[]>;
+  // createRole(roleName: string): Promise<Role>;
 }
