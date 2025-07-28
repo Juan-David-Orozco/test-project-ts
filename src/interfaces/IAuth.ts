@@ -30,6 +30,22 @@ export type ILoginDTO = z.infer<typeof LoginSchema>;
 //   password: string;
 // }
 
+// Esquema Zod para solicitar reseteo de contraseña
+export const PasswordResetRequestSchema = z.object({
+  email: z.string().email('Invalid email format.'),
+}).strict();
+
+export type IPasswordResetRequestDTO = z.infer<typeof PasswordResetRequestSchema>;
+
+// Esquema Zod para confirmar reseteo de contraseña
+export const PasswordResetConfirmSchema = z.object({
+  token: z.string().min(1, 'Token is required.'),
+  email: z.string().email('Email is required and must be a valid format.'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long.'),
+}).strict();
+
+export type IPasswordResetConfirmDTO = z.infer<typeof PasswordResetConfirmSchema>;
+
 export interface IAuthResponse {
   user: {
     id: number;

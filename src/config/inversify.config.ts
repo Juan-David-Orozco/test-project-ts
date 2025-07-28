@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { Logger } from 'winston'; // Importar el tipo Logger de Winston
 import { TYPES } from './types.js'; // Importar los símbolos de inyección
 import logger from './logger.js'; // Importar la instancia configurada de Winston
+import Redis from 'ioredis'; // Importar el tipo Redis
+import redisClient from './redis.config.js'; // Importar la instancia configurada
 
 // Importar las interfaces de Repositorios y Servicios
 import { IUserRepository } from '../repositories/interfaces/IUserRepository.js';
@@ -58,9 +60,10 @@ container.bind<AuthController>(TYPES.AuthController).to(AuthController);
 container.bind<UserController>(TYPES.UserController).to(UserController);
 container.bind<ProjectController>(TYPES.ProjectController).to(ProjectController);
 
-// NUEVO Registro para el Logger como constante (singleton)
+
 container.bind<Logger>(TYPES.Logger).toConstantValue(logger);
-// Nuevo bind para el Orquestador de Registro
 container.bind<RegistrationOrchestrator>(TYPES.RegistrationOrchestrator).to(RegistrationOrchestrator);
+// Nuevo bind para el cliente Redis como constante (singleton)
+container.bind<Redis>(TYPES.RedisClient).toConstantValue(redisClient);
 
 export { container };

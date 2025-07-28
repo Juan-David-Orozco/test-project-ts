@@ -1,8 +1,8 @@
 // src/config/types.ts
 export const TYPES = {
-  // Cliente Prisma
-  PrismaClient: Symbol.for('PrismaClient'),
-
+  
+  PrismaClient: Symbol.for('PrismaClient'), // Cliente Prisma
+  RedisClient: Symbol.for('RedisClient'), // Nuevo tipo para Redis
   // Repositorios
   IUserRepository: Symbol.for('IUserRepository'),
   IProjectRepository: Symbol.for('IProjectRepository'),

@@ -1,32 +1,30 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-// import { injectable, inject } from 'tsyringe';
+import { JWT_SECRET, JWT_RESET_SECRET, FRONTEND_URL } from "../../config/conf.js";
 import { injectable, inject } from "inversify";
-import { TYPES } from "../../config/types.js";
+import { Logger } from "winston";
+import Redis from 'ioredis'; // Importar Redis
 
-// Ya no se inyectan directamente aquí (Se inyectan en el orquetador de Registro)
-// import { IEmailService, ISmsService } from '../interfaces/INotificationService.js'; // Importar interfaces de notificación
-import { RegistrationOrchestrator } from "./registration.orchestrator.js"; // Importar el orquestador
-import { Logger } from "winston"; // Importar Logger de Winston
-
-import { JWT_SECRET } from "../../config/conf.js";
 import { IAuthService } from "../interfaces/IAuthService.js";
 import { IUserRepository } from "../../repositories/interfaces/IUserRepository.js";
 import {
   IRegisterDTO,
   ILoginDTO,
   IAuthResponse,
+  IPasswordResetConfirmDTO
 } from "../../interfaces/IAuth.js";
-// Importamos el token del repositorio de usuarios del nuevo archivo tokens.ts
-// import { USER_REPOSITORY } from '../../config/tokens.js';
-// import { USER_REPOSITORY } from '../../config/container.js'; // Importamos el token del repositorio de usuarios
 import { User } from "@prisma/client";
+import { TYPES } from "../../config/types.js";
+import { RegistrationOrchestrator } from "./registration.orchestrator.js"; // Importar el orquestador
+import { IEmailService } from "../interfaces/INotificationService.js";
 
 @injectable()
 export class AuthService implements IAuthService {
   private userRepository: IUserRepository;
   private logger: Logger;
-  private registrationOrchestrator: RegistrationOrchestrator; // Declarar propiedad para el orquestador
+  private registrationOrchestrator: RegistrationOrchestrator;
+  private redisClient: Redis; // Añadir cliente Redis
+  private emailService: IEmailService; // Para recuperación de contraseña
   // private emailService: IEmailService;
   // private smsService: ISmsService;
 
@@ -34,15 +32,15 @@ export class AuthService implements IAuthService {
     @inject(TYPES.IUserRepository) userRepository: IUserRepository,
     @inject(TYPES.Logger) logger: Logger,
     @inject(TYPES.RegistrationOrchestrator)
-    registrationOrchestrator: RegistrationOrchestrator // Inyectar el orquestador
-    // @inject(TYPES.IEmailService) emailService: IEmailService,
-    // @inject(TYPES.ISmsService) smsService: ISmsService,
+    registrationOrchestrator: RegistrationOrchestrator, // Inyectar el orquestador
+    @inject(TYPES.RedisClient) redisClient: Redis, // Inyectar Redis
+    @inject(TYPES.IEmailService) emailService: IEmailService, // Inyectar EmailService (Recovery password)
   ) {
     this.userRepository = userRepository;
-    this.logger = logger; // Asignar el logger
+    this.logger = logger;
     this.registrationOrchestrator = registrationOrchestrator;
-    // this.emailService = emailService; // No se asignan
-    // this.smsService = smsService; // No se asignan
+    this.redisClient = redisClient;
+    this.emailService = emailService;
   }
 
   async register(
@@ -82,41 +80,11 @@ export class AuthService implements IAuthService {
       email,
       hashedPassword,
       role.id,
-      phoneNumber // Pasa el número de teléfono si lo tienes en IRegisterDTO
+      phoneNumber
     );
     this.logger.info(`[AuthService] User registration process completed for: ${user.email}`);
-    // this.logger.info(`User registered successfully: ${user.email} with role ${user.role.name}`);
-
-    // try {
-    //   await this.emailService.sendRegistrationEmail(user.email, user.username);
-    //   this.logger.debug(`Registration email sent to ${user.email}`);
-    //   // Asumimos que registerData.phoneNumber existe si quieres enviar SMS
-    //   // if (registerData.phoneNumber) {
-    //   //   await this.smsService.sendRegistrationSms(registerData.phoneNumber, user.username);
-    //   // }
-    //   // Por simplicidad, siempre se asume un número de teléfono de ejemplo por ahora.
-    //   await this.smsService.sendRegistrationSms("+1234567890", user.username); // Usar un número de prueba
-    //   this.logger.debug(
-    //     `Registration SMS sent to +1234567890 for ${user.username}`
-    //   );
-    // } catch (notificationError) {
-    //   // console.error(`Error sending notification for user ${user.email}:`, notificationError);
-    //   this.logger.error(
-    //     `Error sending notification for user ${user.email}:`,
-    //     notificationError
-    //   );
-    //   // Decidir si este error debe impedir el registro o solo loguearse.
-    //   // Por ahora, solo se loguea.
-    // }
 
     return { id: user.id, username: user.username, email: user.email, role: { name: role.name } };
-
-    // return {
-    //   id: user.id,
-    //   username: user.username,
-    //   email: user.email,
-    //   role: { name: user.role.name },
-    // };
   }
 
   async login(loginData: ILoginDTO): Promise<IAuthResponse> {
@@ -161,5 +129,87 @@ export class AuthService implements IAuthService {
       },
       token,
     };
+  }
+
+  async logout(token: string): Promise<void> {
+    this.logger.debug(`[AuthService] Attempting to log out token.`);
+    try {
+      const decoded = jwt.decode(token) as jwt.JwtPayload;
+      if (decoded && decoded.exp) {
+        const expiresIn = decoded.exp - Math.floor(Date.now() / 1000); // Tiempo de vida restante en segundos
+        if (expiresIn > 0) {
+          await this.redisClient.setex(`blacklist:${token}`, expiresIn, 'blacklisted');
+          this.logger.info(`[AuthService] Token blacklisted for ${expiresIn} seconds.`);
+        } else {
+          this.logger.warn('[AuthService] Token already expired, no need to blacklist.');
+        }
+      } else {
+        this.logger.warn('[AuthService] Invalid token or missing expiration, cannot blacklist.');
+      }
+    } catch (error) {
+      this.logger.error(`[AuthService] Error blacklisting token:`, error);
+      throw new Error('Failed to logout due to token processing error.');
+    }
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    this.logger.debug(`[AuthService] Requesting password reset for email: ${email}`);
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      this.logger.warn(`[AuthService] Password reset request for non-existent email: ${email}`);
+      // No lanzar error para evitar enumeración de usuarios
+      return;
+    }
+
+    const resetToken = jwt.sign(
+      { userId: user.id },
+      JWT_RESET_SECRET as string,
+      { expiresIn: '15m' } // Token válido por 15 minutos
+    );
+
+    // Guardar el token de reseteo en Redis con el usuario ID y un TTL
+    // Esto asegura que el token solo se puede usar una vez y tiene un tiempo limitado
+    await this.redisClient.setex(`passwordReset:${user.id}`, 900, resetToken); // 900 segundos = 15 minutos
+
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}&email=${email}`; // URL de tu frontend
+    await this.emailService.sendPasswordResetEmail(email, user.username, resetLink);
+    this.logger.info(`[AuthService] Password reset link sent to ${email}`);
+  }
+
+  async resetPassword(resetData: IPasswordResetConfirmDTO): Promise<void> {
+    this.logger.debug(`[AuthService] Attempting to reset password for email: ${resetData.email}`);
+    const { token, email, newPassword } = resetData;
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET as string) as { userId: number };
+
+      const user = await this.userRepository.findById(decoded.userId);
+      if (!user || user.email !== email) {
+        this.logger.warn(`[AuthService] Password reset failed: User not found or email mismatch for token.`);
+        throw new Error('Invalid or expired password reset token.');
+      }
+
+      // Verificar que el token aún sea válido en Redis
+      const storedToken = await this.redisClient.get(`passwordReset:${user.id}`);
+      if (!storedToken || storedToken !== token) {
+        this.logger.warn(`[AuthService] Password reset failed: Token not found in Redis or mismatch for user ${user.id}.`);
+        throw new Error('Invalid or expired password reset token.');
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await this.userRepository.update(user.id, { password: hashedPassword });
+
+      // Eliminar el token de Redis para asegurar que no se pueda reutilizar
+      await this.redisClient.del(`passwordReset:${user.id}`);
+
+      this.logger.info(`[AuthService] Password successfully reset for user: ${email}`);
+    } catch (error: any) {
+      if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+        this.logger.warn(`[AuthService] Password reset failed due to token issues: ${error.message}`);
+        throw new Error('Invalid or expired password reset token.');
+      }
+      this.logger.error(`[AuthService] Error during password reset for ${email}:`, error);
+      throw new Error(`Failed to reset password: ${error.message}`);
+    }
   }
 }
