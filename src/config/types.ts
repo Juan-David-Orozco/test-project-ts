@@ -15,6 +15,8 @@ export const TYPES = {
   ISmsService: Symbol.for('ISmsService'), // Servicios de Notificación (Sms)
   // Logger
   Logger: Symbol.for('Logger'),
+  // Orquestador de Registro
+  RegistrationOrchestrator: Symbol.for('RegistrationOrchestrator'),
 
   // Controladores (aunque no siempre se inyectan directamente, es buena práctica tener el token si planeas resolverlos)
   AuthController: Symbol.for('AuthController'),

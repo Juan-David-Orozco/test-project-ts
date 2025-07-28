@@ -20,9 +20,18 @@ export class UserService implements IUserService {
     return await this.userRepository.findAll();
   }
 
-  async getUserById(id: number): Promise<(User & { role: Role }) | null> {
+  async getUserById(id: number, currentUserId: number, currentUserRole: string): Promise<(User & { role: Role }) | null> {
     this.logger.debug(`Fetching user with ID: ${id}`);
-    return await this.userRepository.findById(id);
+    const userFound = await this.userRepository.findById(id);
+    if (!userFound) {
+      this.logger.warn(`Fetching user failed: User with ID ${id} not found.`);
+      throw new Error('User not found.');
+    }
+    if (currentUserRole !== 'admin' && userFound.id !== currentUserId) {
+      this.logger.warn(`user ${currentUserId} You can get only your own account.`);
+      throw new Error('Forbidden: You can get only your own account.');
+    }
+    return userFound
   }
 
   async createUserByAdmin(userData: IUserCreateByAdminDTO, currentUserId: number, currentUserRole: string): Promise<User & { role: Role }> {

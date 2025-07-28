@@ -9,6 +9,7 @@ export class UserRepository implements IUserRepository {
 
   async findAll(): Promise<(User & { role: Role })[]> {
     return await this.prisma.user.findMany({
+      orderBy: { id: "asc" },
       include: { role: true },
     })
   }

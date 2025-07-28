@@ -1,25 +1,19 @@
 import { Request, Response } from "express";
-// import { injectable, inject } from 'tsyringe';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../config/types.js'; 
 import { IAuthService } from '../services/interfaces/IAuthService.js';
 import { handleServiceError } from '../utils/errorHandler.js';
-// import { AUTH_SERVICE } from '../config/tokens.js';
-// import { AUTH_SERVICE } from '../config/container.js'; // Importamos el token del servicio de auth
-// import { AuthService } from "../services/impl/auth.service.js";
 
 @injectable()
 export class AuthController {
-  constructor(@inject(TYPES.IAuthService) private authService: IAuthService) {} // Inyectamos el servicio de auth
-  // private authService: IAuthService
-  //  constructor(authService: IAuthService) { // Acepta IAuthService a través del constructor
-  //   this.authService = authService;
-  // }
+  constructor(
+    @inject(TYPES.IAuthService) private authService: IAuthService
+  ) {} // Inyectamos el servicio de auth
 
   async register(req: Request, res: Response) {  
     try {
-      const { username, email, password, role } = req.body;
-      const user = await this.authService.register({username, email, password, role});
+      const { username, email, password, role, phoneNumber } = req.body;
+      const user = await this.authService.register({username, email, password, role, phoneNumber});
       res.status(201).json({ message: "User registered successfully", user });
     } catch (error: any) {
       handleServiceError(res, error, 'Failed to register user.');

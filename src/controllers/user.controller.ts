@@ -30,7 +30,9 @@ export class UserController {
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Invalid user ID.' });
       }
-      const user = await this.userService.getUserById(id);
+      const currentUserId = req.user?.id;
+      const currentUserRole = req.user?.role;
+      const user = await this.userService.getUserById(id, currentUserId, currentUserRole);
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
       }

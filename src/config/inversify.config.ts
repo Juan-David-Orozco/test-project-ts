@@ -24,6 +24,8 @@ import { EmailService } from '../services/impl/email.service.js'; // Nueva imple
 import { SmsService } from '../services/impl/sms.service.js'; // Nueva implementación
 import { ProjectService } from '../services/impl/project.service.js';
 
+import { RegistrationOrchestrator } from '../services/impl/registration.orchestrator.js';
+
 import { AuthController } from '../controllers/auth.controller.js';
 import { UserController } from '../controllers/user.controller.js';
 import { ProjectController } from '../controllers/project.controller.js';
@@ -58,5 +60,7 @@ container.bind<ProjectController>(TYPES.ProjectController).to(ProjectController)
 
 // NUEVO Registro para el Logger como constante (singleton)
 container.bind<Logger>(TYPES.Logger).toConstantValue(logger);
+// Nuevo bind para el Orquestador de Registro
+container.bind<RegistrationOrchestrator>(TYPES.RegistrationOrchestrator).to(RegistrationOrchestrator);
 
 export { container };

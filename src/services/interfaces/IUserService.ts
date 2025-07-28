@@ -4,7 +4,7 @@ import { IUserUpdateDTO, IUserCreateByAdminDTO } from '../../interfaces/IUser.js
 
 export interface IUserService {
   getAllUsers(): Promise<(User & { role: Role })[]>;
-  getUserById(id: number): Promise<(User & { role: Role }) | null>;
+  getUserById(id: number, currentUserId: number | undefined, currentUserRole: string | undefined): Promise<(User & { role: Role }) | null>;
   updateUser(id: number, userData: IUserUpdateDTO, currentUserId: number, currentUserRole: string): Promise<User & { role: Role }>;
   deleteUser(id: number, currentUserId: number, currentUserRole: string): Promise<User>;
   // Posiblemente crear usuarios por admin, o cambiar roles
